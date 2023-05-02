@@ -16,17 +16,17 @@ def main():
 
     while True:
         try:
-            urls_emails = mails.get_list_of_driveUrl_and_emails(gmail_service)
-            print(urls_emails)
+            requestId_messageId = mails.get_list_of_driveUrl_and_emails(gmail_service)
+            print(requestId_messageId)
 
-            for google_drive_url,email_account,message_id in urls_emails:
-                my_private_new_id = google_drive.copy_public_file_to_my_drive(drive_service,google_drive_url)
+            for request_id,message_id in requestId_messageId:
+                my_private_new_id = google_drive.copy_public_file_to_my_drive(drive_service,request_id)
 
-                if my_private_new_id == response_type.NOT_ENOUGH_PERMISSIONS: 
-                    mails.send_reply(gmail_service, message_id, email_account,my_private_new_id)
+                if isinstance(my_private_new_id, response_type):
+                    mails.send_reply(gmail_service, message_id,request_id ,my_private_new_id)
                     continue
 
-                google_drive.share_file_with_email(drive_service,my_private_new_id,email_account)
+                google_drive.share_file_with_email(drive_service,my_private_new_id,request_id)
             time.sleep(60)
         except Exception as e:
             print(e)

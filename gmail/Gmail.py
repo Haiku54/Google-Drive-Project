@@ -2,7 +2,7 @@ import re
 import base64
 from files.constatns import *
 from email.utils import parseaddr
-from IGmail import IGmail
+from gmail.IGmail import IGmail
 from googleapiclient.errors import HttpError
 from files.Google import Create_Service
 from googleapiclient.discovery import build
@@ -37,7 +37,7 @@ class gmailClass(IGmail):
                 ).execute()
             messages = unread_msgs.get('messages', [])
 
-            google_drive_links = []
+            requestIDs_messageIDs = [] #list of tuples
 
             for message in messages:
                 # Mark message as read
@@ -67,14 +67,14 @@ class gmailClass(IGmail):
                     for link in drive_links:
                         if not self.data_base.is_RequestedFiles_in_table(self.extract_file_id_from_public_url(link)):
                             self.data_base.insert_requested_files(self.extract_file_id_from_public_url(link),None)
-                        dataBase_id = self.data_base.insert_requests(sender_email,sender_name,self.extract_file_id_from_public_url(link), None,datetime.now(),None)
+                        request_id = self.data_base.insert_requests(sender_email,sender_name,self.extract_file_id_from_public_url(link), None,datetime.now(),None)
 
                         #The link to the file, the email account of the sender of the message and the ID of the message
-                        google_drive_links.append([link, sender_email,message['id']]) 
+                        requestIDs_messageIDs.append((request_id,message['id'])) 
 
                 
 
-            return google_drive_links
+            return requestIDs_messageIDs
 
         except HttpError as error:
                 print(f"An error occurred: {error}")
@@ -91,10 +91,13 @@ class gmailClass(IGmail):
     
 
 
-    def send_reply(self,service, msg_id, to_email, response:response_type):
+    def send_reply(self,service, msg_id, request_id, response:response_type):
         if response == response_type.NOT_ENOUGH_PERMISSIONS:
             reply_body = NOT_ENOUGH_PERMISSIONS_MESSAGE
+        elif response == response_type.FILE_NOT_FOUND:
+            reply_body = FILE_NOT_FOUND_MESSAGE
         if reply_body:
+            to_email = self.data_base.get_email_by_request_id(request_id)
 
                 # Create MIMEText object with the reply body
             message = MIMEText(reply_body)

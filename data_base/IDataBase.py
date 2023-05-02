@@ -26,4 +26,29 @@ class IDataBase(ABC):
     def close_connection(self):
         pass
 
+    @abstractmethod
+    def get_email_by_request_id(self, request_id):
+        pass
+    
+    @abstractmethod
+    def get_requestFile_id_by_request_id(self, request_id):
+        pass
+    
+    @abstractmethod
+    def update_is_copied_to_true(self, request_id):
+        pass
+
+    @abstractmethod
+    def update_file_size_in_requested_files(self, file_id, file_size):
+        pass
+
+    @abstractmethod
+    def update_request_with_returned_file(self, request_id, returned_file_id):
+        pass
+
+    @abstractmethod
+    def insert_into_active_files(self, requested_file_id, returned_file_id):
+        pass
+    
+
     

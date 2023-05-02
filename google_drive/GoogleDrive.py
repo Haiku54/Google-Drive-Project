@@ -1,11 +1,14 @@
-from IGoogleDrive import IGoogleDrive
+from google_drive.IGoogleDrive import IGoogleDrive
 from files.Google import *
+from files.constatns import*
 from googleapiclient.errors import HttpError
 from urllib.parse import urlparse, parse_qs
 import re
 from datetime import datetime, timedelta
 import pytz
 from files.constatns import *
+from data_base.IDataBase import *
+from data_base.dataBase import *
 
 CLIENT_SECRET_FILE='credentials.json'
 API_NEAME = 'drive'
@@ -14,6 +17,7 @@ SCOPES = ['https://www.googleapis.com/auth/drive']
 
 class ClassGoogleDrive(IGoogleDrive):
 
+    data_base: IDataBase = SQLDataBase()
 
     
     def Create_Service(self): 
@@ -21,14 +25,21 @@ class ClassGoogleDrive(IGoogleDrive):
         return service
     
 
-    def copy_public_file_to_my_drive(self,service, public_file_url): #יעתיק ויחזיר את האיי די החדש
-        public_file_id = self.extract_file_id_from_public_url(public_file_url)
+    def copy_public_file_to_my_drive(self,service, request_id): #יעתיק ויחזיר את האיי די החדש
+        public_file_id = self.data_base.get_requestFile_id_by_request_id(request_id)
 
         #cheak size of the file
         size = self.get_file_size(service, public_file_id) 
+
         if size is None:
             print("file size not found")
             return 
+        if size == "Error 404":
+            return response_type.FILE_NOT_FOUND
+        
+        #Inserting the file size into the request table
+        self.data_base.update_file_size_in_requested_files(public_file_id,size)
+        
         if not self.is_enough_space(service,size):
             print("there is no enough space in the google account")
             return
@@ -57,6 +68,14 @@ class ClassGoogleDrive(IGoogleDrive):
 
             copied_file_id = copied_file['id']
             print("The public file has been copied to your drive.")
+
+            # Update copied file value
+            self.data_base.update_is_copied_to_true(request_id)
+            # Insert into returned files table.
+            self.data_base.insert_returned_files(copied_file_id,public_file_id)
+            #Insert into a table of currently active files in my Google Drive
+            self.data_base.insert_activeFiles(copied_file_id,public_file_id)
+            
             return copied_file_id
         except HttpError as error:
             copied_file = None
@@ -67,8 +86,9 @@ class ClassGoogleDrive(IGoogleDrive):
                 print(f"An error occurred: {error}")
 
 
-    def share_file_with_email(self,service, file_id, email):
+    def share_file_with_email(self,service, file_id, request_id):
         try:
+            email = self.data_base.get_email_by_request_id(request_id)
             permissions = {
                 'type': 'user',
                 'role': 'reader',  # or 'writer' 
@@ -80,6 +100,9 @@ class ClassGoogleDrive(IGoogleDrive):
                 body=permissions,
                 fields='id'
             ).execute()
+
+            #Inserting the returned ID into the request table
+            self.data_base.update_request_with_returned_file(request_id,file_id)
             print(f"File ID {file_id} has been shared with {email}.")
 
         except HttpError as error:
@@ -89,7 +112,7 @@ class ClassGoogleDrive(IGoogleDrive):
 
 
 
-    def extract_file_id_from_public_url(self,url):
+    """def extract_file_id_from_public_url(self,url):
     # Regular expression pattern to match Google Drive file IDs
         file_id_pattern = r'(?:file\/d\/|\/d\/|id=)([-\w]+)'
     
@@ -101,7 +124,7 @@ class ClassGoogleDrive(IGoogleDrive):
              return file_id
         else:
              print("Could not find a valid file ID in the given URL.")
-             return None
+             return None"""
         
     
     def get_or_create_folder(self, service, folder_name):
@@ -139,8 +162,13 @@ class ClassGoogleDrive(IGoogleDrive):
                 print("We could not find the file")
                 return None
         except HttpError as error:
-            print(f"get_file_size: {error}")
+            if error.resp.status == 404:
+                print("get_file_size: File not found (404)")
+                return "Error 404"
+            else:
+                print(f"get_file_size: {error}")
             return None
+
         
 
     def is_enough_space(self,service, file_size):

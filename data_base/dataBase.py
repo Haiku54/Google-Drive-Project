@@ -1,12 +1,22 @@
 import pyodbc
-from IDataBase import *
+from data_base.IDataBase import *
 
 connection_string = r'DRIVER={ODBC Driver 17 for SQL Server};SERVER=(local)\SQLEXPRESS;DATABASE=google_drive_projrct_dataBase;Trusted_Connection=yes;'
 
 class SQLDataBase(IDataBase):
+    _instance = None
+
+    #singlton
+    def __new__(cls): 
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
+
     def __init__(self):
-        self.conn = pyodbc.connect(connection_string)
-        self.cursor = self.conn.cursor()
+        if not hasattr(self, 'conn'):
+            self.conn = pyodbc.connect(connection_string)
+            self.cursor = self.conn.cursor()
 
 
     def insert_requested_files(self, file_id, file_size):
@@ -23,7 +33,7 @@ class SQLDataBase(IDataBase):
         VALUES (?, ?, GETDATE())
         '''
         self.cursor.execute(query, (file_id, requested_file_id))
-        self.connection.commit()
+        self.conn.commit()
 
 
     def insert_requests(self, email, name, requested_file_id, returned_file_id, request_date, is_copied):
@@ -42,7 +52,26 @@ class SQLDataBase(IDataBase):
         return request_id
 
 
+    def get_email_by_request_id(self, request_id):
+        query = '''
+        SELECT Email
+        FROM Requests
+        WHERE RequestID = ?
+        '''
+        self.cursor.execute(query, (request_id,))
+        result = self.cursor.fetchone()
+        return result[0] if result else None
 
+
+    def get_requestFile_id_by_request_id(self, request_id):
+        query = '''
+        SELECT RequestedFileID
+        FROM Requests
+        WHERE RequestID = ?
+        '''
+        self.cursor.execute(query, (request_id,))
+        result = self.cursor.fetchone()
+        return result[0] if result else None
 
 
     def insert_activeFiles(self, returned_file_id, requested_file_id):
@@ -62,6 +91,45 @@ class SQLDataBase(IDataBase):
         count = self.cursor.fetchone()[0]
 
         return count > 0
+    
+
+    def update_is_copied_to_true(self, request_id):
+        query = '''
+        UPDATE Requests
+        SET IsCopied = 1
+        WHERE RequestID = ?
+        '''
+        self.cursor.execute(query, (request_id))
+        self.conn.commit()
+
+    
+    def update_file_size_in_requested_files(self, file_id, file_size):
+        query = '''
+        UPDATE RequestedFiles
+        SET FileSize = ?
+        WHERE FileID = ? AND FileSize IS NULL
+        '''
+        self.cursor.execute(query, (file_size, file_id))
+        self.conn.commit()
+
+
+    def update_request_with_returned_file(self, request_id, returned_file_id):
+        query = '''
+        UPDATE Requests
+        SET ReturnedFileID = ?
+        WHERE RequestID = ?
+        '''
+        self.cursor.execute(query, (returned_file_id, request_id))
+        self.conn.commit()
+
+    
+    def insert_into_active_files(self, requested_file_id, returned_file_id):
+        query = '''
+        INSERT INTO ActiveFiles (ReturnedFileID, RequestedFileID, CreationDate)
+        VALUES (?, ?, GETDATE())
+        '''
+        self.cursor.execute(query, (returned_file_id, requested_file_id))
+        self.conn.commit()
 
 
 
