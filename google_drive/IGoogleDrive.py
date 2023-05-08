@@ -17,3 +17,19 @@ class IGoogleDrive(ABC):
     @abstractmethod
     def delete_old_folders(self,service, hours):
         pass
+
+    @abstractmethod
+    def convert_file_ids_to_urls(self,files):
+        pass
+
+    @abstractmethod
+    def convert_folder_ids_to_urls(self,folders):
+        pass
+
+    @abstractmethod
+    def get_list_of_folders_in_folder(self,service, folder_id):
+        pass
+
+    @abstractmethod
+    def get_list_of_files_in_folder(self,service, folder_id):
+        pass

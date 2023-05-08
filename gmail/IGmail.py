@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from files.constatns import response_type
+from files.constatns import *
 
 class IGmail(ABC):
 
@@ -8,7 +8,7 @@ class IGmail(ABC):
         pass
 
     @abstractmethod
-    def get_list_of_driveUrl_and_emails(self,service): 
+    def get_list_of_requesrIDs_and_massageIDs(self,service): 
         pass
 
     @abstractmethod

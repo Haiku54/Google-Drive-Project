@@ -11,7 +11,7 @@ class IDataBase(ABC):
         pass
     
     @abstractmethod
-    def insert_requests(self,Email,Name,RequestedFileID,ReturnedFileID,RequestDate,IsCopied): 
+    def insert_requests(self,Email,Name,RequestedFileID,ReturnedFileID,RequestDate,IsCopied,folderID): 
         pass
 
     @abstractmethod
@@ -48,6 +48,22 @@ class IDataBase(ABC):
 
     @abstractmethod
     def insert_into_active_files(self, requested_file_id, returned_file_id):
+        pass
+
+    @abstractmethod
+    def get_returned_file_id_active(self, requested_file_id):
+        pass
+
+    @abstractmethod
+    def is_email_authorized(self,email):
+        pass
+
+    @abstractmethod
+    def delete_files_from_active_files(self, list_of_files):
+        pass
+
+    @abstractmethod
+    def get_requsted_folderID(self,request_id):
         pass
     
 
