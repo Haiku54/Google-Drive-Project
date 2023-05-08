@@ -1,3 +1,4 @@
-[submodule "submodule"]
-	path = submodule
+
+[submodule "Module for Google Cloud Functions/submodule"]
+	path = Module for Google Cloud Functions/submodule
 	url = https://github.com/Haiku54/Google-Drive-Project.git
