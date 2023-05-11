@@ -12,8 +12,10 @@ Many religious people have limited ISPs with filtered access, allowing them to a
 
 ## Current status and future progress
 
-GDrive Access Converter is still a work in progress, but people are already using it. The current run is only on the developer's local computer, where the existing main function is temporary. Later, the project will be transferred to Google Cloud Functions which, upon receiving an email from the user, will automatically activate the upload of the file to the developer's Google Drive and return the new link to the user.
+Google Drive Access Converter is in ongoing development and already serving users, even while work continues. Currently, the system runs on the developer's local machine with main function in a temporary setup.
 
-In addition, the current documentation of the requests and database management is hosted on a local SQL server. Later, it will be ported to Google SQL to improve efficiency.
+A significant advancement in the project has been in terms of database management. Initially, the documentation of the requests and database management was hosted on a local SQL server. However, it has now been successfully migrated to Microsoft Azure's MySQL cloud server, resulting in improved efficiency and accessibility.
+
+The next step planned for the project is to migrate it to Google Cloud Functions. Upon completion of this step, the system will automatically trigger the file upload to the developer's Google Drive and return a new link to the user when an email is received.
 
 
