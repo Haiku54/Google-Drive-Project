@@ -4,6 +4,7 @@ class response_type(Enum):
     NOT_ENOUGH_PERMISSIONS = 1
     FILE_NOT_FOUND = 2
     FOLDER_EXISTS = 3
+    ALREADY_SENT_LAST = 4
     
 
 class InsufficientSpaceException(Exception):
@@ -24,6 +25,16 @@ FILE_NOT_FOUND_MESSAGE ="""
 FOLDER_EXISTS_MESSAGE = """
 היי :)
 קיבלנו קישור לתיקייה, בגלל שכרגע אנחנו עובדים רק עם קישורים לקבצים, מצורף פה כל רשימת הקבצים בתיקייה ששלחת. מוזמן לשלוח את הקישור הרלוונטי עבורך.
-שים לב: אם בתיקייה היו תיקיות נוספות, קיבלת גם קישורים לאותם תיקיות. כמובן שגם אותם ניתן לשלוח ולקבל את הקבצים ו.או תיקיות נוספות
+שימו לב: אם בתיקייה היו תיקיות נוספות, קיבלת גם קישורים לאותם תיקיות. כמובן שגם אותם ניתן לשלוח ולקבל את הקבצים ו.או תיקיות נוספות
+😊
+"""
+
+ALREADY_SENT_LAST_MESSAGE = """
+היי :)
+ שמנו לב שכבר השתמשת בשירות בשעתיים האחרונות וקיבלת קישורים פרטיים עבור קבצים שביקשת בסך כולל של מעל חצי גיגה.
+כרגע השירות מוגבל לקישור לקבצים שמעל חצי גיגה כל שעתיים, נסה שוב מאוחר יותר. בעז"ה בהמשך לא יהיו הגבלות כאלו.
+
+עם זאת שימו לב, עבור קבלת רשימות הקבצים והתיקיות בתוך תיקייה, אין הגבלה כזו ואפשר להשתמש בשירות כמה שרוצים.
+בתקווה להבנה
 😊
 """

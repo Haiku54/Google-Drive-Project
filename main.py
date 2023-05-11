@@ -8,7 +8,7 @@ from files.constatns import *
 def main():
     google_drive: IGoogleDrive = ClassGoogleDrive()
     mails: IGmail = gmailClass()
-    data_base: IDataBase = SQLDataBase()
+    data_base: IDataBase = MySQLDataBase()
 
     drive_service = google_drive.Create_Service()
     time.sleep(2)
@@ -43,7 +43,7 @@ def main():
                     continue
 
                 google_drive.share_file_with_email(drive_service,response_id,request_id)
-            time.sleep(60*3)
+            time.sleep(30)
         except Exception as e:
             print(e)
 

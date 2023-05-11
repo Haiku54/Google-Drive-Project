@@ -18,7 +18,7 @@ SCOPES = ['https://www.googleapis.com/auth/drive']
 
 class ClassGoogleDrive(IGoogleDrive):
 
-    data_base: IDataBase = SQLDataBase()
+    data_base: IDataBase = MySQLDataBase()
 
     
     def Create_Service(self): 
@@ -41,7 +41,7 @@ class ClassGoogleDrive(IGoogleDrive):
         If there isn't enough space in the user's Google account after deleting the oldest file, InsufficientSpaceException is raised.
         If the copy fails due to lack of permissions or any other error, it returns an error message describing the problem.
         """
-
+        
         public_file_id = self.data_base.get_requestFile_id_by_request_id(request_id)
         #checking if folder is requested
         if self.data_base.get_requsted_folderID(request_id) :
@@ -53,6 +53,11 @@ class ClassGoogleDrive(IGoogleDrive):
             return file_id_from_myDrive
 
 
+        #if sender uploaded 0.5 GB file in the last 2 hours
+        email_sender = self.data_base.get_email_by_request_id(request_id)
+        if self.data_base.is_user_uploaded_half_GB_last_2_hours(email_sender):
+            return response_type.ALREADY_SENT_LAST
+        
         #cheak size of the file
         size = self.get_file_size(service, public_file_id) 
 
@@ -77,7 +82,7 @@ class ClassGoogleDrive(IGoogleDrive):
             folder_id = self.get_or_create_folder(service, folder_name)
 
             # Get the original file's metadata
-            original_file_metadata = service.files().get(fileId=public_file_id, fields='name,description').execute()
+            original_file_metadata = service.files().get(fileId=public_file_id, fields='name,description',supportsAllDrives=True).execute()
             original_file_name = original_file_metadata['name']
             original_file_description = original_file_metadata.get('description', '')
 
@@ -90,7 +95,8 @@ class ClassGoogleDrive(IGoogleDrive):
 
             copied_file = service.files().copy(
                 fileId=public_file_id,
-                body=copied_file_metadata
+                body=copied_file_metadata,
+                supportsAllDrives=True
             ).execute()
 
             copied_file_id = copied_file['id']
@@ -183,7 +189,7 @@ class ClassGoogleDrive(IGoogleDrive):
     def get_file_size(self,service, file_id):
         try:
             #Getting information about the file
-            file_metadata = service.files().get(fileId=file_id, fields="size").execute()
+            file_metadata = service.files().get(fileId=file_id, fields="size",supportsAllDrives=True).execute()
 
            
             file_size = file_metadata.get("size")

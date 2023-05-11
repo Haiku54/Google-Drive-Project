@@ -1,51 +1,60 @@
-import pyodbc
+import mysql.connector
+import datetime
+import json
+import atexit
 from data_base.IDataBase import *
 
-connection_string = r'DRIVER={ODBC Driver 17 for SQL Server};SERVER=(local)\SQLEXPRESS;DATABASE=google_drive_projrct_dataBase;Trusted_Connection=yes;'
+# Load the database configuration from json file
+with open('data_base/database_config.json') as f:
+    config = json.load(f)
 
-class SQLDataBase(IDataBase):
+class MySQLDataBase(IDataBase):
     _instance = None
 
-    #singlton
+    # singleton
     def __new__(cls): 
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
-    
+
 
     def __init__(self):
         if not hasattr(self, 'conn'):
-            self.conn = pyodbc.connect(connection_string)
+            self.conn = mysql.connector.connect(**config)
             self.cursor = self.conn.cursor()
+            # Register the close_connection method to be called on exit
+            atexit.register(self.close_connection)
 
 
     def insert_requested_files(self, file_id, file_size):
         query = '''
         INSERT INTO RequestedFiles (FileID, FileSize)
-        VALUES (?, ?)
+        VALUES (%s, %s)
         '''
         self.cursor.execute(query, (file_id, file_size))
         self.conn.commit()
 
+
     def insert_returned_files(self, file_id, requested_file_id):
         query = '''
         INSERT INTO ReturnedFiles (FileID, RequestedFileID, CreationDate)
-        VALUES (?, ?, GETDATE())
+        VALUES (%s, %s, %s)
         '''
-        self.cursor.execute(query, (file_id, requested_file_id))
+        #creation current date
+        now = datetime.datetime.now()
+        self.cursor.execute(query, (file_id, requested_file_id, now))
         self.conn.commit()
 
 
-    def insert_requests(self, email, name, requested_file_id, returned_file_id, request_date, is_copied,folderID):
+    def insert_requests(self, email, name, requested_file_id, returned_file_id, request_date, is_copied, folderID):
         query = '''
-        INSERT INTO Requests (Email, Name, RequestedFileID, ReturnedFileID, RequestDate, IsCopied,FolderID)
-        OUTPUT INSERTED.RequestID
-        VALUES (?, ?, ?, ?, ?, ?,?)
+        INSERT INTO Requests (Email, Name, RequestedFileID, ReturnedFileID, RequestDate, IsCopied, FolderID)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         '''
-        self.cursor.execute(query, (email, name, requested_file_id, returned_file_id, request_date, is_copied,folderID))
+        self.cursor.execute(query, (email, name, requested_file_id, returned_file_id, request_date, is_copied, folderID))
         
-        # Get the generated RequestID using OUTPUT INSERTED
-        request_id = self.cursor.fetchone()[0]
+        # Get the generated RequestID using lastrowid
+        request_id = self.cursor.lastrowid
 
         self.conn.commit()
 
@@ -56,7 +65,7 @@ class SQLDataBase(IDataBase):
         query = '''
         SELECT Email
         FROM Requests
-        WHERE RequestID = ?
+        WHERE RequestID = %s
         '''
         self.cursor.execute(query, (request_id,))
         result = self.cursor.fetchone()
@@ -67,7 +76,7 @@ class SQLDataBase(IDataBase):
         query = '''
         SELECT RequestedFileID
         FROM Requests
-        WHERE RequestID = ?
+        WHERE RequestID = %s
         '''
         self.cursor.execute(query, (request_id,))
         result = self.cursor.fetchone()
@@ -77,37 +86,37 @@ class SQLDataBase(IDataBase):
     def insert_activeFiles(self, returned_file_id, requested_file_id):
         query = '''
         INSERT INTO ActiveFiles (ReturnedFileID, RequestedFileID)
-        VALUES (?, ?)
+        VALUES (%s, %s)
         '''
         self.cursor.execute(query, (returned_file_id, requested_file_id))
         self.conn.commit()
 
-    
+
     def is_RequestedFiles_in_table(self, file_id):
         query = '''
-        SELECT COUNT(*) FROM RequestedFiles WHERE FileID = ?
+        SELECT COUNT(*) FROM RequestedFiles WHERE FileID = %s
         '''
         self.cursor.execute(query, (file_id,))
         count = self.cursor.fetchone()[0]
 
         return count > 0
-    
+
 
     def update_is_copied_to_true(self, request_id):
         query = '''
         UPDATE Requests
         SET IsCopied = 1
-        WHERE RequestID = ?
+        WHERE RequestID = %s
         '''
-        self.cursor.execute(query, (request_id))
+        self.cursor.execute(query, (request_id,))  # Note the comma after request_id
         self.conn.commit()
 
     
     def update_file_size_in_requested_files(self, file_id, file_size):
         query = '''
         UPDATE RequestedFiles
-        SET FileSize = ?
-        WHERE FileID = ? AND FileSize IS NULL
+        SET FileSize = %s
+        WHERE FileID = %s AND FileSize IS NULL
         '''
         self.cursor.execute(query, (file_size, file_id))
         self.conn.commit()
@@ -116,17 +125,17 @@ class SQLDataBase(IDataBase):
     def update_request_with_returned_file(self, request_id, returned_file_id):
         query = '''
         UPDATE Requests
-        SET ReturnedFileID = ?
-        WHERE RequestID = ?
+        SET ReturnedFileID = %s
+        WHERE RequestID = %s
         '''
         self.cursor.execute(query, (returned_file_id, request_id))
         self.conn.commit()
 
-    
+
     def insert_into_active_files(self, requested_file_id, returned_file_id):
         query = '''
-        INSERT INTO ActiveFiles (ReturnedFileID, RequestedFileID, CreationDate)
-        VALUES (?, ?, GETDATE())
+        INSERT INTO ActiveFiles (ReturnedFileID, RequestedFileID)
+        VALUES (%s, %s)
         '''
         self.cursor.execute(query, (returned_file_id, requested_file_id))
         self.conn.commit()
@@ -136,7 +145,7 @@ class SQLDataBase(IDataBase):
         query = '''
         SELECT ReturnedFileID
         FROM ActiveFiles
-        WHERE RequestedFileID = ?
+        WHERE RequestedFileID = %s
         '''
         self.cursor.execute(query, (requested_file_id,))
         result = self.cursor.fetchone()
@@ -145,36 +154,67 @@ class SQLDataBase(IDataBase):
             return result[0]
         else:
             return None
-        
+
 
     def is_email_authorized(self,email):
-        query = f"SELECT COUNT(*) FROM AuthorizedEmails WHERE Email = ?"
-        self.cursor.execute(query, email)
+        query = "SELECT COUNT(*) FROM AuthorizedEmails WHERE Email = %s"
+        self.cursor.execute(query, (email,))
         count = self.cursor.fetchone()[0]
         return count > 0
-    
+
 
     def delete_files_from_active_files(self, list_of_files):
         query = '''
         DELETE FROM ActiveFiles
-        WHERE ReturnedFileID = ?
+        WHERE ReturnedFileID = %s
         '''
         for file in list_of_files:
             self.cursor.execute(query, (file,))
             self.conn.commit()
 
-    
+
     def get_requsted_folderID(self,request_id):
         query = '''
-        SELECT FolderID FROM Requests WHERE RequestID = ?
+        SELECT FolderID FROM Requests WHERE RequestID = %s
         '''
         self.cursor.execute(query, (request_id,))
         result = self.cursor.fetchone()[0]
         return result
 
 
+    def is_user_uploaded_half_GB_last_2_hours(self, email):
+        """
+        Returns True if the user has uploaded more than half a gigabyte in the last two hours, False otherwise.
+        
+        :param email: The email of the user.
+        :return: True if the user has uploaded more than half a gigabyte in the last two hours, False otherwise.
+        """
+        two_hours_ago = datetime.datetime.now() - datetime.timedelta(hours=2)
+
+        query = '''
+        SELECT rf.FileID, rf.FileSize
+        FROM Requests AS r
+        JOIN RequestedFiles AS rf ON r.RequestedFileID = rf.FileID
+        WHERE r.Email = %s
+        AND r.RequestDate >= %s
+        AND r.ReturnedFileID IS NOT NULL
+        AND r.IsCopied IS NOT NULL
+        '''
+
+        # Execute the query with the email and time as parameters
+        self.cursor.execute(query, (email, two_hours_ago))
+
+        # Fetch the results.
+        results = self.cursor.fetchall()
+
+        # Calculate the total size of the returned files
+        total_size = sum([result[1] for result in results])
+
+        # Return True if the total size is greater than half a gigabyte, False otherwise
+        return total_size > (0.5 * 1024 * 1024 * 1024)
 
 
     def close_connection(self):
         self.cursor.close()
         self.conn.close()
+        print("Connection to data base closed")

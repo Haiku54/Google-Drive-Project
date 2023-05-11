@@ -18,7 +18,7 @@ API_VERSION='v1'
 SCOPES = ['https://mail.google.com/']
 
 class gmailClass(IGmail):
-    data_base: IDataBase = SQLDataBase()
+    data_base: IDataBase = MySQLDataBase()
     """def __init__(self):
           self.data_base"""
           
@@ -64,7 +64,8 @@ class gmailClass(IGmail):
 
                 
                 # Regular expression to find Google Drive links
-                drive_link_pattern = re.compile(r'https://drive\.google\.com/file/d/[^/]+/view[^ \n]*')
+                drive_link_pattern = re.compile(r'https://drive\.google\.com/(file/d/[^/]+/view|u/\d+/open\?id=[^ \n]+)[^ \n]*')
+
 
                 drive_links = drive_link_pattern.findall(msg_body)
 
@@ -126,6 +127,8 @@ class gmailClass(IGmail):
             reply_body = NOT_ENOUGH_PERMISSIONS_MESSAGE
         elif response == response_type.FILE_NOT_FOUND:
             reply_body = FILE_NOT_FOUND_MESSAGE
+        elif response == response_type.ALREADY_SENT_LAST:
+            reply_body = ALREADY_SENT_LAST_MESSAGE
         elif response == response_type.FOLDER_EXISTS:
             #send all url files and their name
             reply_body = FOLDER_EXISTS_MESSAGE+"\n\n"
@@ -162,19 +165,29 @@ class gmailClass(IGmail):
             return send_message
         
 
-    def extract_file_id_from_public_url(self,url):
-    # Regular expression pattern to match Google Drive file IDs
+    def extract_file_id_from_public_url(self, url):
+        # Regular expression pattern to match Google Drive file IDs
         file_id_pattern = r'(?:file\/d\/|\/d\/|id=)([-\w]+)'
-    
+
+        # Try to match the regular pattern
         match = re.search(file_id_pattern, url)
-    
+
         if match:
-             file_id = match.group(1)
-             print(file_id)
-             return file_id
+            file_id = match.group(1)
+            print(file_id)
+            return file_id
         else:
-             print("Could not find a valid file ID in the given URL.")
-             return None
+            # Try to match the pattern with "/u/0/open?id="
+            file_id_pattern = r'(?<=id=)([-\w]+)'
+            match = re.search(file_id_pattern, url)
+            if match:
+                file_id = match.group(1)
+                print(file_id)
+                return file_id
+            else:
+                print("Could not find a valid file ID in the given URL.")
+                return None
+
         
     
     def extract_folder_id_from_url(self,url):

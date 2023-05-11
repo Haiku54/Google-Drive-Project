@@ -65,6 +65,10 @@ class IDataBase(ABC):
     @abstractmethod
     def get_requsted_folderID(self,request_id):
         pass
+
+    @abstractmethod
+    def is_user_uploaded_half_GB_last_2_hours(self,email):
+        pass
     
 
     
