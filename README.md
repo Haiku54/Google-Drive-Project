@@ -19,3 +19,14 @@ A significant advancement in the project has been in terms of database managemen
 The next step planned for the project is to migrate it to Google Cloud Functions. Upon completion of this step, the system will automatically trigger the file upload to the developer's Google Drive and return a new link to the user when an email is received.
 
 
+## Project Diagrams
+
+This section contains visual representations of the project structure and database design, including an Entity Relationship Diagram (ERD) and a Unified Modeling Language (UML) diagram.
+
+### Entity Relationship Diagram (ERD)
+
+The ERD provides a detailed view of the database structure, including tables, fields, and the relationships between them. It serves as a blueprint for designing the database system.
+
+![ERD diagram](https://github.com/Haiku54/Google-Drive-Project/assets/80857560/f8fbc968-34e8-418b-a390-a7a7bc16f359)
+
+
