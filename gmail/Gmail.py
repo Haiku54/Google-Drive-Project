@@ -2,35 +2,38 @@ import re
 import base64
 from files.constatns import *
 from email.utils import parseaddr
-from gmail.IGmail import IGmail
 from googleapiclient.errors import HttpError
 from files.Google import Create_Service
+from files.singlton import Singleton
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from email.mime.text import MIMEText
-from data_base.IDataBase import *
 from data_base.dataBase import *
 from datetime import datetime
 
 CLIENT_SECRET_FILE='credentials.json'
-API_NEAME = 'gmail'
+API_NAME = 'gmail'
 API_VERSION='v1'
 SCOPES = ['https://mail.google.com/']
 
-class gmailClass(IGmail):
-    data_base: IDataBase = MySQLDataBase()
-    """def __init__(self):
-          self.data_base"""
-          
-       
-    def Create_Service(self): 
-        service = Create_Service(CLIENT_SECRET_FILE,API_NEAME,API_VERSION,SCOPES)
+class GmailService(Singleton):
+    def __init__(self):
+            if hasattr(self, "_initialized"):
+                return
+            
+            self.service = self.__create_service()
+            self.data_base = MySQLDataBase()
+            self._initialized = True
+
+
+    def  __create_service(self): 
+        service = Create_Service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
         return service
 
     
-    def get_list_of_requesrIDs_and_massageIDs(self,service): 
+    def get_list_of_requesrIDs_and_massageIDs(self): 
         try:
-            unread_msgs = service.users().messages().list(
+            unread_msgs = self.service.users().messages().list(
                   userId='me',
                   labelIds=['INBOX'],
                   q='is:unread'
@@ -42,13 +45,13 @@ class gmailClass(IGmail):
 
             for message in messages:
                 # Mark message as read
-                service.users().messages().modify(
+                self.service.users().messages().modify(
                     userId='me', 
                     id=message['id'],
                     body={'removeLabelIds': ['UNREAD']}
                 ).execute()
                 
-                msg = service.users().messages().get(
+                msg = self.service.users().messages().get(
                       userId='me',
                       id=message['id']
                     ).execute()
@@ -80,12 +83,13 @@ class gmailClass(IGmail):
 
                 else:
                 #if this is folder link of google drive
-                    folder_link_pattern = re.compile(r'https://drive\.google\.com/drive/folders/[^ \n]+')
+                    folder_link_pattern = re.compile(r'https://drive\.google\.com/drive(?:/u/\d+)?/folders/[^ \n]+')
                     folder_links = folder_link_pattern.findall(msg_body)
 
                     #if there is folder link
                     if folder_links:
-                        request_id = self.data_base.insert_requests(sender_email,sender_name,None, None,datetime.now(),None,self.extract_folder_id_from_url(folder_links[0]))
+                        link = folder_links[0]
+                        request_id = self.data_base.insert_requests(sender_email,sender_name,None, None,datetime.now(),None,self.extract_folder_id_from_url(link))
                         requestIDs_messageIDs.append((request_id,message['id']))
 
                         
@@ -190,14 +194,17 @@ class gmailClass(IGmail):
 
         
     
-    def extract_folder_id_from_url(self,url):
-        folder_id_pattern = r'(?:/folders/)([\w-]+)'
+    def extract_folder_id_from_url(self, url):
+        folder_id_pattern = r'(?:/folders/|/u/\d+/folders/)([\w-]+)'
         match = re.search(folder_id_pattern, url)
         if match:
             folder_id = match.group(1)
             return folder_id
         else:
             return None
+        
+
+
 
         
 

@@ -2,28 +2,22 @@ import mysql.connector
 import datetime
 import json
 import atexit
-from data_base.IDataBase import *
+from files.singlton import Singleton
 
 # Load the database configuration from json file
 with open('data_base/database_config.json') as f:
     config = json.load(f)
 
-class MySQLDataBase(IDataBase):
-    _instance = None
-
-    # singleton
-    def __new__(cls): 
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-
+class MySQLDataBase(Singleton):
+   
     def __init__(self):
-        if not hasattr(self, 'conn'):
-            self.conn = mysql.connector.connect(**config)
-            self.cursor = self.conn.cursor()
-            # Register the close_connection method to be called on exit
-            atexit.register(self.close_connection)
+        if hasattr(self, "_initialized"):
+                return
+        self.conn = mysql.connector.connect(**config)
+        self.cursor = self.conn.cursor()
+        # Register the close_connection method to be called on exit
+        atexit.register(self.close_connection)
+        self._initialized = True
 
 
     def insert_requested_files(self, file_id, file_size):

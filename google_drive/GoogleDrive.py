@@ -4,10 +4,9 @@ import re
 import pytz
 from googleapiclient.errors import HttpError
 from files.constatns import *
-from data_base.IDataBase import *
 from data_base.dataBase import *
 from files.Google import *
-from google_drive.IGoogleDrive import *
+from files.singlton import Singleton
 from datetime import datetime
 
 
@@ -16,17 +15,21 @@ API_NEAME = 'drive'
 API_VERSION='v3'
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
-class ClassGoogleDrive(IGoogleDrive):
+class ClassGoogleDrive(Singleton):
 
-    data_base: IDataBase = MySQLDataBase()
+    def __init__(self):
+        if hasattr(self, "_initialized"):
+            return
+        self.service = self.__Create_Service()
+        self.data_base = MySQLDataBase()
 
     
-    def Create_Service(self): 
+    def __Create_Service(self): 
         service = Create_Service(CLIENT_SECRET_FILE,API_NEAME,API_VERSION,SCOPES)
         return service
     
 
-    def copy_public_file_to_my_drive(self,service, request_id): 
+    def copy_public_file_to_my_drive(self, request_id): 
         """
         Copies a file from a public link to the user's Google Drive and returns the new file ID.
 
@@ -59,7 +62,7 @@ class ClassGoogleDrive(IGoogleDrive):
             return response_type.ALREADY_SENT_LAST
         
         #cheak size of the file
-        size = self.get_file_size(service, public_file_id) 
+        size = self.get_file_size(self.service, public_file_id) 
 
         if size is None:
             print("file size not found")
@@ -70,19 +73,19 @@ class ClassGoogleDrive(IGoogleDrive):
         #Inserting the file size into the request table
         self.data_base.update_file_size_in_requested_files(public_file_id,size)
         
-        if not self.is_enough_space(service,size):
+        if not self.is_enough_space(self.service,size):
             #try to delete the oldest file one day before
-            self.delete_oldest_file(service,24)
-            if not self.is_enough_space(service,size):
+            self.delete_oldest_file(self.service,24)
+            if not self.is_enough_space(self.service,size):
                 raise InsufficientSpaceException("Error: not enough space in google account aftr deleting the oldest file")
             print("deleted the oldest file succeeded")
 
         try:
             folder_name = datetime.now().strftime("%Y-%m-%d")
-            folder_id = self.get_or_create_folder(service, folder_name)
+            folder_id = self.get_or_create_folder(self.service, folder_name)
 
             # Get the original file's metadata
-            original_file_metadata = service.files().get(fileId=public_file_id, fields='name,description',supportsAllDrives=True).execute()
+            original_file_metadata = self.service.files().get(fileId=public_file_id, fields='name,description',supportsAllDrives=True).execute()
             original_file_name = original_file_metadata['name']
             original_file_description = original_file_metadata.get('description', '')
 
@@ -93,7 +96,7 @@ class ClassGoogleDrive(IGoogleDrive):
                 'parents': [folder_id]
         }
 
-            copied_file = service.files().copy(
+            copied_file = self.service.files().copy(
                 fileId=public_file_id,
                 body=copied_file_metadata,
                 supportsAllDrives=True
@@ -119,7 +122,7 @@ class ClassGoogleDrive(IGoogleDrive):
                 print(f"An error occurred: {error}")
 
 
-    def share_file_with_email(self,service, file_id, request_id):
+    def share_file_with_email(self, file_id, request_id):
         """
         Shares a file with a user by their email address.
 
@@ -139,7 +142,7 @@ class ClassGoogleDrive(IGoogleDrive):
             }
 
             # Insert new permission
-            service.permissions().create(
+            self.service.permissions().create(
                 fileId=file_id,
                 body=permissions,
                 fields='id'
@@ -154,7 +157,7 @@ class ClassGoogleDrive(IGoogleDrive):
             print(f"An error occurred: {error}")
 
            
-    def get_or_create_folder(self, service, folder_name):
+    def get_or_create_folder(self, folder_name):
         """
         Gets or creates a folder in the user's Google Drive.
         parameters:
@@ -167,7 +170,7 @@ class ClassGoogleDrive(IGoogleDrive):
         """
 
         query = f"mimeType='application/vnd.google-apps.folder' and trashed = false and name='{folder_name}'"
-        results = service.files().list(q=query, fields="files(id)").execute()
+        results = self.service.files().list(q=query, fields="files(id)").execute()
         folders = results.get("files", [])
 
         # If the folder doesn't exist, create it
@@ -176,7 +179,7 @@ class ClassGoogleDrive(IGoogleDrive):
                 'name': folder_name,
                 'mimeType': 'application/vnd.google-apps.folder'
             }
-            folder = service.files().create(body=metadata, fields="id").execute()
+            folder = self.service.files().create(body=metadata, fields="id").execute()
             # Get the folder ID
             folder_id = folder["id"]
         else:
@@ -186,10 +189,10 @@ class ClassGoogleDrive(IGoogleDrive):
     
     
 
-    def get_file_size(self,service, file_id):
+    def get_file_size(self, file_id):
         try:
             #Getting information about the file
-            file_metadata = service.files().get(fileId=file_id, fields="size",supportsAllDrives=True).execute()
+            file_metadata = self.service.files().get(fileId=file_id, fields="size",supportsAllDrives=True).execute()
 
            
             file_size = file_metadata.get("size")
@@ -209,10 +212,10 @@ class ClassGoogleDrive(IGoogleDrive):
 
         
 
-    def is_enough_space(self,service, file_size):
+    def is_enough_space(self, file_size):
         try:
             # Receiving information about the storage of the account
-            storage_info = service.about().get(fields="storageQuota").execute()
+            storage_info = self.service.about().get(fields="storageQuota").execute()
 
             # Finding the amount of free space in the account
             total_space = int(storage_info['storageQuota']['limit'])
@@ -230,11 +233,11 @@ class ClassGoogleDrive(IGoogleDrive):
             return False
         
 
-    def delete_old_folders(self,service, hours):
+    def delete_old_folders(self, hours):
         try:
             #Finding all folders in the main Google Drive
             query = "mimeType='application/vnd.google-apps.folder' and trashed = false and 'root' in parents"
-            results = service.files().list(q=query, fields="nextPageToken, files(id, createdTime, name)").execute()
+            results = self.service.files().list(q=query, fields="nextPageToken, files(id, createdTime, name)").execute()
             folders = results.get("files", [])
 
             # Setting the time before the folders are deleted
@@ -243,10 +246,10 @@ class ClassGoogleDrive(IGoogleDrive):
             for folder in folders:
                 created_time = datetime.fromisoformat(folder["createdTime"][:-1]).replace(tzinfo=pytz.utc)
                 if created_time < delete_before:
-                    list_of_files = self.get_list_of_files_in_folder(service, folder["id"])
+                    list_of_files = self.get_list_of_files_in_folder(self.service, folder["id"])
 
                     # Deleting the folder and all its contents
-                    service.files().delete(fileId=folder["id"]).execute()
+                    self.service.files().delete(fileId=folder["id"]).execute()
 
                     # Deleting the files from the active_files table
                     self.data_base.delete_files_from_active_files(list_of_files)
@@ -257,10 +260,10 @@ class ClassGoogleDrive(IGoogleDrive):
             print(f"An error occurred: {error}")
 
     
-    def get_list_of_files_in_folder(self,service, folder_id):
+    def get_list_of_files_in_folder(self, folder_id):
         try:
             query = f"'{folder_id}' in parents and trashed = false"
-            results = service.files().list(q=query, fields="nextPageToken, files(id, name)").execute()
+            results = self.service.files().list(q=query, fields="nextPageToken, files(id, name)").execute()
             files = results.get("files", [])
             return files
         except HttpError as error:
@@ -268,10 +271,10 @@ class ClassGoogleDrive(IGoogleDrive):
             return None
         
 
-    def get_list_of_folders_in_folder(self,service, folder_id):
+    def get_list_of_folders_in_folder(self, folder_id):
         try:
             query = f"'{folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed = false"
-            results = service.files().list(q=query, fields="nextPageToken, files(id, name)").execute()
+            results = self.service.files().list(q=query, fields="nextPageToken, files(id, name)").execute()
             folders = results.get("files", [])
             return folders
         except HttpError as error:
