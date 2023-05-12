@@ -18,8 +18,8 @@ NOT_ENOUGH_PERMISSIONS_MESSAGE = """
 
 FILE_NOT_FOUND_MESSAGE ="""
 היי :) 
-נתקלנו בבעיה בהמרה של הקובץ. זה יכול להיות מ2 סיבות, או שהקובץ כבר לא קיים או שאין לנו אפשרות כרגע להעתיק סוג קובץ ספציפי זה, אולי בהמשך...
-😊 בכל אופן מוזמנים לנסות עם קבצים אחרים
+נתקלנו בבעיה בהמרה של הקובץ. זה יכול להיות מ2 סיבות, או שהקובץ כבר לא קיים או שהקובץ הוא פרטי ואין הרשאות ציבוריות לפתוח אותו
+.מוזמנים לנסות שוב עם קובץ אחר 😊
 """
 
 FOLDER_EXISTS_MESSAGE = """

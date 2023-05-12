@@ -116,7 +116,7 @@ class GmailService(Singleton):
     
 
 
-    def send_reply(self,service, msg_id, request_id, response:response_type,all_urls=None):
+    def send_reply(self, msg_id, request_id, response:response_type,all_urls=None):
         '''
         Sends a reply to the sender of the message with the given ID.
         The reply body is determined by the response type.
@@ -157,7 +157,7 @@ class GmailService(Singleton):
 
             # Send the reply message 
             try:
-                send_message = service.users().messages().send(
+                send_message = self.service.users().messages().send(
                  userId='me',
                  body=create_message
                  ).execute()

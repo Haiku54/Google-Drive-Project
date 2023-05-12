@@ -61,8 +61,15 @@ class ClassGoogleDrive(Singleton):
         if self.data_base.is_user_uploaded_half_GB_last_2_hours(email_sender):
             return response_type.ALREADY_SENT_LAST
         
+        # if the file is a shortcut, get the original file ID
+        file = self.service.files().get(fileId=public_file_id,supportsAllDrives=True).execute()
+        if file['mimeType'] == 'application/vnd.google-apps.shortcut':
+            print('This file is a shortcut.')
+            public_file_id_shortcut = public_file_id
+            public_file_id = self.get_original_file_id(public_file_id_shortcut)
+        
         #cheak size of the file
-        size = self.get_file_size(self.service, public_file_id) 
+        size = self.get_file_size(public_file_id) 
 
         if size is None:
             print("file size not found")
@@ -73,16 +80,16 @@ class ClassGoogleDrive(Singleton):
         #Inserting the file size into the request table
         self.data_base.update_file_size_in_requested_files(public_file_id,size)
         
-        if not self.is_enough_space(self.service,size):
+        if not self.is_enough_space(size):
             #try to delete the oldest file one day before
             self.delete_oldest_file(self.service,24)
-            if not self.is_enough_space(self.service,size):
+            if not self.is_enough_space(size):
                 raise InsufficientSpaceException("Error: not enough space in google account aftr deleting the oldest file")
             print("deleted the oldest file succeeded")
 
         try:
             folder_name = datetime.now().strftime("%Y-%m-%d")
-            folder_id = self.get_or_create_folder(self.service, folder_name)
+            folder_id = self.get_or_create_folder( folder_name)
 
             # Get the original file's metadata
             original_file_metadata = self.service.files().get(fileId=public_file_id, fields='name,description',supportsAllDrives=True).execute()
@@ -105,6 +112,8 @@ class ClassGoogleDrive(Singleton):
             copied_file_id = copied_file['id']
             print("The public file has been copied to your drive.")
 
+            if public_file_id_shortcut:
+                public_file_id = public_file_id_shortcut
             # Update copied file value
             self.data_base.update_is_copied_to_true(request_id)
             # Insert into returned files table.
@@ -300,6 +309,22 @@ class ClassGoogleDrive(Singleton):
             folder_url = f"https://drive.google.com/drive/folders/{folder_id}"
             urls.append((folder_url,name))
         return urls
+    
+
+    def get_original_file_id(self,shortcut_file_id):
+        # Build the Drive API service
+    
+
+        # Get the shortcut file
+        request = self.service.files().get(fileId=shortcut_file_id, fields='shortcutDetails',supportsAllDrives=True)
+        file = request.execute()
+
+        # The ID of the original file is in the 'targetId' field of the 'shortcutDetails' field
+        original_file_id = file['shortcutDetails']['targetId']
+
+        print (original_file_id)
+        return original_file_id
+
 
         
 
