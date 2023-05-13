@@ -63,9 +63,11 @@ class ClassGoogleDrive(Singleton):
         
         # if the file is a shortcut, get the original file ID
         file = self.service.files().get(fileId=public_file_id,supportsAllDrives=True).execute()
+        
+        #if the file is a shortcut, then public_file_id_shortcut is the shortcut file id else it is the same as public_file_id
+        public_file_id_shortcut = public_file_id
         if file['mimeType'] == 'application/vnd.google-apps.shortcut':
             print('This file is a shortcut.')
-            public_file_id_shortcut = public_file_id
             public_file_id = self.get_original_file_id(public_file_id_shortcut)
         
         #cheak size of the file
@@ -78,7 +80,7 @@ class ClassGoogleDrive(Singleton):
             return response_type.FILE_NOT_FOUND
         
         #Inserting the file size into the request table
-        self.data_base.update_file_size_in_requested_files(public_file_id,size)
+        self.data_base.update_file_size_in_requested_files(public_file_id_shortcut,size)
         
         if not self.is_enough_space(size):
             #try to delete the oldest file one day before
@@ -112,14 +114,12 @@ class ClassGoogleDrive(Singleton):
             copied_file_id = copied_file['id']
             print("The public file has been copied to your drive.")
 
-            if public_file_id_shortcut:
-                public_file_id = public_file_id_shortcut
             # Update copied file value
             self.data_base.update_is_copied_to_true(request_id)
             # Insert into returned files table.
-            self.data_base.insert_returned_files(copied_file_id,public_file_id)
+            self.data_base.insert_returned_files(copied_file_id,public_file_id_shortcut)
             #Insert into a table of currently active files in my Google Drive
-            self.data_base.insert_activeFiles(copied_file_id,public_file_id)
+            self.data_base.insert_activeFiles(copied_file_id,public_file_id_shortcut)
             
             return copied_file_id
         except HttpError as error:
