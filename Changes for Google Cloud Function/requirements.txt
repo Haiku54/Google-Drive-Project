@@ -1,0 +1,11 @@
+pyodbc
+httplib2
+oauthlib
+google-auth
+google-auth-httplib2
+google-auth-oauthlib
+google-api-python-client
+google-cloud-storage
+datetime
+mysql.connector
+pytz

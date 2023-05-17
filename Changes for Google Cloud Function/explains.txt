@@ -1,0 +1,2 @@
+In this folder, files are kept that contain changes that are needed following the run in Google Cloud Function. Like main and the Google login file.
+Also, save the zip file with the entire program here, this is the file uploaded to Google Cloud Function
