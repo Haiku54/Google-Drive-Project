@@ -12,11 +12,15 @@ Many religious people have limited ISPs with filtered access, allowing them to a
 
 ## Current status and future progress
 
-Google Drive Access Converter is in ongoing development and already serving users, even while work continues. Currently, the system runs on the developer's local machine with main function in a temporary setup.
+Google Drive Access Converter is making consistent progress in its development. Initially, it operated on a local machine but has since transitioned to a more robust setup.
 
-A significant advancement in the project has been in terms of database management. Initially, the documentation of the requests and database management was hosted on a local SQL server. However, it has now been successfully migrated to Microsoft Azure's MySQL cloud server, resulting in improved efficiency and accessibility.
+An important part of this progression was the enhancement of database management. Originally, a local SQL server was used for managing requests and the database. However, this aspect has now been successfully migrated to Microsoft Azure's MySQL cloud server, thereby improving efficiency and accessibility.
 
-The next step planned for the project is to migrate it to Google Cloud Functions. Upon completion of this step, the system will automatically trigger the file upload to the developer's Google Drive and return a new link to the user when an email is received.
+The most significant advancement has been the successful migration of the system to Google Cloud Functions. This development has automated the process, where the system triggers a file upload to the developer's Google Drive and generates a new link for the user upon receipt of an email. This upgrade has streamlined the operation and significantly enhanced the reliability and efficiency of the system.
+
+The Google Drive Access Converter is already serving many users effectively. For those interested, a [simple registration form](https://docs.google.com/forms/d/e/1FAIpQLSenhwvdwOJKnqU12meJEKLcc_VsHz5KJ50UI6JbbOV-03vdOw/viewform?usp=sf_link) is available. Upon registration, users can start utilizing the service immediately.
+
+Future plans for this project include further refinement and improvement, with the focus on maintaining its practical and manageable scale, while constantly increasing its effectiveness and value.
 
 
 ## Project Diagrams
