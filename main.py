@@ -42,6 +42,8 @@ def main():
             time.sleep(30)
         except Exception as e:
             print(e)
+    
+    data_base.close_connection()
 
         
     

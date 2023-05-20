@@ -35,3 +35,5 @@ def main(*args, **kwargs):
     except Exception as e:
         print(e)
 
+    data_base.close_connection()
+
