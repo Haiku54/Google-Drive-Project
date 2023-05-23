@@ -69,20 +69,22 @@ class GmailService(Singleton):
                     raise PermissionError(f"Access denied for email: {sender_email}")
 
 
-                drive_file_links, drive_folder_links = self.get_drive_links_from_msg('me',message['id'])
-                if drive_file_links:
-                    file_id = drive_file_links[0]['id'] # only one file link is allowed
-                    if not self.data_base.is_RequestedFiles_in_table(file_id):
-                        self.data_base.insert_requested_files(file_id,None)
-                    request_id = self.data_base.insert_requests(sender_email,sender_name,file_id, None,datetime.now(),None,None)
+                drive_links = self.get_drive_links_from_msg('me',message['id'])
+
+
+                if drive_links:
+                    file_id = drive_links[0]['id'] # only one file link is allowed
+                    #if not self.data_base.is_RequestedFiles_in_table(file_id):
+                      #  self.data_base.insert_requested_files(file_id,None)
+                    request_id = self.data_base.insert_requests(sender_email,sender_name,file_id, None,None,None)
 
                     #The link to the file, the email account of the sender of the message and the ID of the message
                     requestIDs_messageIDs.append((request_id,message['id'])) 
                 
-                elif drive_folder_links:
-                    folder_id = drive_folder_links[0]['id'] # only one folder link is allowed
-                    request_id = self.data_base.insert_requests(sender_email,sender_name,None, None,datetime.now(),None,folder_id)
-                    requestIDs_messageIDs.append((request_id,message['id']))
+               # elif drive_folder_links:
+                 #   folder_id = drive_folder_links[0]['id'] # only one folder link is allowed
+                  #  request_id = self.data_base.insert_requests(sender_email,sender_name,None, None,None,folder_id)
+                   # requestIDs_messageIDs.append((request_id,message['id']))
 
 
             return requestIDs_messageIDs
@@ -92,80 +94,6 @@ class GmailService(Singleton):
                 return None
 
                 
-                # Regular expression to find Google Drive links
-                """drive_link_pattern = re.compile(r'https://drive\.google\.com/(file/d/[^/]+/view|u/\d+/open\?id=[^ \n]+)[^ \n]*')
-
-
-                drive_links = drive_link_pattern.findall(msg_body)
-
-                if drive_links:
-                    link = drive_links[0]
-                    if not self.data_base.is_RequestedFiles_in_table(self.extract_file_id_from_public_url(link)):
-                        self.data_base.insert_requested_files(self.extract_file_id_from_public_url(link),None)
-                    request_id = self.data_base.insert_requests(sender_email,sender_name,self.extract_file_id_from_public_url(link), None,datetime.now(),None,None)
-
-                    #The link to the file, the email account of the sender of the message and the ID of the message
-                    requestIDs_messageIDs.append((request_id,message['id'])) 
-
-                else:
-                #if this is folder link of google drive
-                    folder_link_pattern = re.compile(r'https://drive\.google\.com/drive(?:/u/\d+)?/folders/[^ \n]+')
-                    folder_links = folder_link_pattern.findall(msg_body)
-
-                    #if there is folder link
-                    if folder_links:
-                        link = folder_links[0]
-                        request_id = self.data_base.insert_requests(sender_email,sender_name,None, None,datetime.now(),None,self.extract_folder_id_from_url(link))
-                        requestIDs_messageIDs.append((request_id,message['id']))
-
-                        
-                    else:
-                        #continue
-                        
-                        msg = self.service.users().messages().get(userId='me', id=message['id']).execute()
-
-                        links = []
-
-                        if 'payload' in msg:
-                            payload = msg['payload']
-                            for part in payload.get('parts', []):
-                                mime_type = part['mimeType']
-                                body = part['body']
-                                data = body['data']
-                                if mime_type == "text/plain":
-                                    # Using urlsafe base64 decoding
-                                    text = base64.urlsafe_b64decode(data).decode()
-                                    # Find URLs using a regular expression
-                                    url_pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
-                                    urls = re.findall(url_pattern, text)
-                                    links.extend(urls)
-                                if mime_type == "text/html":
-                                    # Using urlsafe base64 decoding
-                                    text = base64.urlsafe_b64decode(data).decode()
-                                    soup = BeautifulSoup(text, 'html.parser')
-                                    for link in soup.find_all('a', href=True):
-                                        links.append(link['href'])
-                        if links:
-                            #find google drive link in all links
-                            for link in links:
-                                link = drive_link_pattern.findall(link)
-                                if link:
-                                    link = link[0]
-                                    if not self.data_base.is_RequestedFiles_in_table(self.extract_file_id_from_public_url(link)):
-                                        self.data_base.insert_requested_files(self.extract_file_id_from_public_url(link),None)
-                                    request_id = self.data_base.insert_requests(sender_email,sender_name,self.extract_file_id_from_public_url(link), None,datetime.now(),None,None)
-                                    requestIDs_messageIDs.append((request_id,message['id'])) 
-                                    break"""
-
-                          
-
-
-
-
-          
-        
-
-        
 
     def get_sender_email(self,msg):
         for header in msg['payload']['headers']:
@@ -272,15 +200,14 @@ class GmailService(Singleton):
         Extracts Google Drive links from the message with the given ID.
         param: user_id - the ID of the user's Gmail account
         param: msg_id - the ID of the message to extract links from
-        return: a list of Google Drive file links and a list of Google Drive folder links
+        return: a list of Google Drive file and folder links
         '''
 
         try:
             msg = self.service.users().messages().get(userId=user_id, id=msg_id).execute()
 
             links = []
-            drive_file_links = []
-            drive_folder_links = []
+            drive_links = []
 
             if 'payload' in msg:
                 payload = msg['payload']
@@ -304,29 +231,26 @@ class GmailService(Singleton):
 
             # Find Google Drive links from the list of all links
             for link in links:
-                # Regex patterns for Google Drive file and folder URLs
-                file_pattern = r'https://drive.google.com/file/d/([a-zA-Z0-9_-]+)/view'
-                folder_pattern = r'https://drive.google.com/drive/folders/([a-zA-Z0-9_-]+)'
-                file_match = re.search(file_pattern, link)
-                folder_match = re.search(folder_pattern, link)
-                if file_match:
-                    drive_file_links.append({'link': link, 'id': file_match.group(1)})
-                elif folder_match:
-                    drive_folder_links.append({'link': link, 'id': folder_match.group(1)})
+                # Regex pattern for Google Drive file and folder URLs
+                link_pattern = r'https://drive.google.com/(?:file/d/|drive/folders/|open\?id=)([a-zA-Z0-9_-]+)/?'
+                link_match = re.search(link_pattern, link)
+                if link_match:
+                    drive_links.append({'link': link, 'id': link_match.group(1)})
 
-            return drive_file_links, drive_folder_links
+            return drive_links
 
         except HttpError as error:
-            print(f'An error occurred: {error}')
+            print(f'An error in \'get_drive_links_from_msg\': {error}')
 
 
-    # Instantiate a service object using your credentials
-    # file_links, folder_links = get_drive_links(service, 'me', 'message_id')
 
-    # Approach the returned data like this:
-    # for file_info in file_links:
-    #     print(f'Google Drive File Link: {file_info["link"]}, ID: {file_info["id"]}')
-    # for folder_info in folder_links:
-    #     print(f'Google Drive Folder Link: {folder_info["link"]}, ID: {folder_info["id"]}')
+        # Instantiate a service object using your credentials
+        # file_links, folder_links = get_drive_links(service, 'me', 'message_id')
+
+        # Approach the returned data like this:
+        # for file_info in file_links:
+        #     print(f'Google Drive File Link: {file_info["link"]}, ID: {file_info["id"]}')
+        # for folder_info in folder_links:
+        #     print(f'Google Drive Folder Link: {folder_info["link"]}, ID: {folder_info["id"]}')
 
 

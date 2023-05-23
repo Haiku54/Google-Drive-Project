@@ -46,9 +46,6 @@ class ClassGoogleDrive(Singleton):
         """
         
         public_file_id = self.data_base.get_requestFile_id_by_request_id(request_id)
-        #checking if folder is requested
-        if self.data_base.get_requsted_folderID(request_id) :
-            return response_type.FOLDER_EXISTS
 
         #Checking if the requested file is already in my Google Drive and if so, return the id of the file in the drive
         file_id_from_myDrive = self.data_base.get_returned_file_id_active(public_file_id) 
@@ -129,6 +126,20 @@ class ClassGoogleDrive(Singleton):
                 return response_type.NOT_ENOUGH_PERMISSIONS
             else:
                 print(f"An error occurred: {error}")
+
+
+    def check_file_or_folder(self,request_id):
+        # Request the file's metadata
+        file_id = self.data_base.get_requestFile_id_by_request_id(request_id)
+        file_metadata = self.service.files().get(fileId=file_id,supportsAllDrives=True).execute()
+
+        if file_metadata['mimeType'] == 'application/vnd.google-apps.folder':
+            # The file is a folder, update the database and return the corresponding string
+            self.data_base.update_is_folder(request_id, 1)
+            return 'Folder'
+        else:
+            self.data_base.update_is_folder(request_id, 0)
+            return 'File'
 
 
     def share_file_with_email(self, file_id, request_id):

@@ -1,6 +1,7 @@
 import mysql.connector
 import datetime
 import json
+import pytz
 import atexit
 
 # Load the database configuration from json file
@@ -23,29 +24,34 @@ class MySQLDataBase:
 
 
     def insert_returned_files(self, file_id, requested_file_id):
+        # Get current time in Israel
+        tz = pytz.timezone('Asia/Jerusalem')
+        current_time_in_israel = datetime.datetime.now(tz)
+
         query = '''
         INSERT INTO ReturnedFiles (FileID, RequestedFileID, CreationDate)
         VALUES (%s, %s, %s)
         '''
-        #creation current date
-        now = datetime.datetime.now()
-        self.cursor.execute(query, (file_id, requested_file_id, now))
+        self.cursor.execute(query, (file_id, requested_file_id, current_time_in_israel))
         self.conn.commit()
 
 
-    def insert_requests(self, email, name, requested_file_id, returned_file_id, request_date, is_copied, folderID):
+    def insert_requests(self, email, name, requested_file_id, returned_file_id, is_copied, is_folder):
+        # Get current time in Israel
+        tz = pytz.timezone('Asia/Jerusalem')
+        current_time_in_israel = datetime.datetime.now(tz)
+
         query = '''
-        INSERT INTO Requests (Email, Name, RequestedFileID, ReturnedFileID, RequestDate, IsCopied, FolderID)
+        INSERT INTO Requests (Email, Name, RequestedFileID, ReturnedFileID, RequestDate, IsCopied, IsFolder)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         '''
-        self.cursor.execute(query, (email, name, requested_file_id, returned_file_id, request_date, is_copied, folderID))
-        
+        self.cursor.execute(query, (email, name, requested_file_id, returned_file_id, current_time_in_israel, is_copied, is_folder))
+
         # Get the generated RequestID using lastrowid
         request_id = self.cursor.lastrowid
-
         self.conn.commit()
-
         return request_id
+
 
 
     def get_email_by_request_id(self, request_id):
@@ -160,13 +166,14 @@ class MySQLDataBase:
             self.conn.commit()
 
 
-    def get_requsted_folderID(self,request_id):
+    def is_requested_folder(self, request_id):
         query = '''
-        SELECT FolderID FROM Requests WHERE RequestID = %s
+        SELECT IsFolder FROM Requests WHERE RequestID = %s
         '''
         self.cursor.execute(query, (request_id,))
         result = self.cursor.fetchone()[0]
-        return result
+        return bool(result)
+
 
 
     def is_user_uploaded_half_GB_last_2_hours(self, email):
@@ -176,7 +183,9 @@ class MySQLDataBase:
         :param email: The email of the user.
         :return: True if the user has uploaded more than half a gigabyte in the last two hours, False otherwise.
         """
-        two_hours_ago = datetime.datetime.now() - datetime.timedelta(hours=2)
+        tz = pytz.timezone('Asia/Jerusalem')
+        current_time_in_israel = datetime.datetime.now(tz)
+        two_hours_ago = current_time_in_israel - datetime.timedelta(hours=2)
 
         query = '''
         SELECT rf.FileID, rf.FileSize
@@ -199,6 +208,19 @@ class MySQLDataBase:
 
         # Return True if the total size is greater than half a gigabyte, False otherwise
         return total_size > (0.5 * 1024 * 1024 * 1024)
+    
+
+    # Inside MySQLDataBase class
+
+    def update_is_folder(self, request_id, is_folder):
+        query = '''
+        UPDATE Requests
+        SET IsFolder = %s
+        WHERE RequestID = %s
+        '''
+        self.cursor.execute(query, (is_folder, request_id))
+        self.conn.commit()
+
 
 
     def close_connection(self):
