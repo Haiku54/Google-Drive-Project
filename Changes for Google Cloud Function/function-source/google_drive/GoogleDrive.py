@@ -109,7 +109,6 @@ class ClassGoogleDrive(Singleton):
                 supportsAllDrives=True
             )
 
-            # Add the resource key to the copied file if it exists
             if resourche_key:
                 copied_file.headers['X-Goog-Drive-Resource-Keys'] = f'{public_file_id}/{resourche_key}'
             copied_file = copied_file.execute()
