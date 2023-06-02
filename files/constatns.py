@@ -18,7 +18,7 @@ NOT_ENOUGH_PERMISSIONS_MESSAGE = """
 
 FILE_NOT_FOUND_MESSAGE ="""
 היי :) 
-נתקלנו בבעיה בהמרה של הקובץ. זה יכול להיות מ2 סיבות, או שהקובץ כבר לא קיים או שהקובץ הוא פרטי ואין הרשאות ציבוריות לפתוח אותו
+נתקלנו בבעיה עם הקובץ הזה. זה יכול להיות מ2 סיבות, או שהקובץ כבר לא קיים או שהקובץ הוא פרטי ואין הרשאות ציבוריות לפתוח אותו
 .מוזמנים לנסות שוב עם קובץ אחר 😊
 """
 

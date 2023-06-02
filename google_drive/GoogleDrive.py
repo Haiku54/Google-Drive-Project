@@ -81,7 +81,7 @@ class ClassGoogleDrive(Singleton):
         
         if not self.is_enough_space(size):
             #try to delete the oldest file one day before
-            self.delete_oldest_file(self.service,24)
+            self.delete_old_folders(24)
             if not self.is_enough_space(size):
                 raise InsufficientSpaceException("Error: not enough space in google account aftr deleting the oldest file")
             print("deleted the oldest file succeeded")
@@ -267,12 +267,13 @@ class ClassGoogleDrive(Singleton):
             folders = results.get("files", [])
 
             # Setting the time before the folders are deleted
-            delete_before = datetime.now(pytz.utc) - timedelta(hours=hours)
+            tz = pytz.timezone('Asia/Jerusalem')
+            delete_before = datetime.now(tz) - timedelta(hours=hours)
 
             for folder in folders:
                 created_time = datetime.fromisoformat(folder["createdTime"][:-1]).replace(tzinfo=pytz.utc)
                 if created_time < delete_before:
-                    list_of_files = self.get_list_of_files_in_folder(self.service, folder["id"])
+                    list_of_files = self.get_list_of_files_in_folder(folder["id"])
 
                     # Deleting the folder and all its contents
                     self.service.files().delete(fileId=folder["id"]).execute()
@@ -284,17 +285,22 @@ class ClassGoogleDrive(Singleton):
 
         except HttpError as error:
             print(f"An error occurred: {error}")
+            
 
-    
     def get_list_of_files_in_folder(self, folder_id):
         try:
             query = f"'{folder_id}' in parents and trashed = false"
             results = self.service.files().list(q=query, fields="nextPageToken, files(id, name)").execute()
             files = results.get("files", [])
-            return files
+            
+            # Extract the file ids from the dictionaries
+            file_ids = [file['id'] for file in files]
+            return file_ids
+
         except HttpError as error:
             print(f"An error occurred: {error}")
             return None
+
         
 
     def get_list_of_folders_in_folder(self, folder_id):

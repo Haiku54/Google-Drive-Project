@@ -77,11 +77,25 @@ def add_authorized_email(email):
     connection.commit()
     print("Email added successfully:", email)
 
+def update_folder_column():
+
+    cursor.execute('ALTER TABLE Requests ADD COLUMN IsFolder BOOLEAN')
+        # Update new column
+    cursor.execute('UPDATE Requests SET IsFolder = 1 WHERE FolderID IS NOT NULL')
+        # Remove old column
+    cursor.execute('ALTER TABLE Requests DROP COLUMN FolderID')
+
+    connection.commit()
+    print("Column updated successfully")
+
 
 
 #craate_database()
 
-add_authorized_email("")
+add_authorized_email("yuiui7776@gmail.com")
+#cursor.execute("SET time_zone='+02:00';")  # Adjust this to '+03:00' for Israel Daylight Saving Time
+#update_folder_column()
+connection.commit()
 
 connection.close()
 print("Connection closed")

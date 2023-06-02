@@ -36,9 +36,18 @@ def main(*args, **kwargs):
                     mails.send_reply( message_id,request_id ,response_id)
                 continue
             google_drive.share_file_with_email(response_id,request_id)
-        
-    except Exception as e:
-        print(e)
 
+            # code that may raise an exception
+    except Exception as e:
+        if hasattr(e, 'resp') and e.resp.status == 404:
+            if 'message_id' in locals() and 'request_id' in locals():
+                mails.send_reply(message_id, request_id, response_type.FILE_NOT_FOUND)
+            else:
+                # handle the case where message_id and request_id are not defined
+                print('Error: message_id and request_id are not defined')
+        else:
+            # handle other exceptions
+            print('Error:', e)
+    
     data_base.close_connection()
 

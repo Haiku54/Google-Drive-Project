@@ -58,7 +58,7 @@ class GmailService(Singleton):
                       userId='me',
                       id=message['id']
                     ).execute()
-                #msg_body = msg['snippet']
+                
                 sender_email,sender_name = self.get_sender_email(msg)
                 if not sender_email:
                     print(f"An error occurred: there is no sender")
